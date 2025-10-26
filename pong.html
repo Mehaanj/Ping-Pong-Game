@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Pong Game</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      text-align: center;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    #game-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    canvas#pong {
+      background: #222;
+      border: 3px solid #fff;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simple Pong</h1>
+  <div id="game-container">
+    <canvas id="pong" width="800" height="500"></canvas>
+  </div>
+  <script>
+    // --- Pong Game ---
+    const canvas = document.getElementById('pong');
+    const ctx = canvas.getContext('2d');
+
+    // Game objects
+    const paddleWidth = 12, paddleHeight = 100;
+    const ballSize = 16;
+    const leftPaddle = {
+      x: 16,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight
+    };
+    const rightPaddle = {
+      x: canvas.width - paddleWidth - 16,
+      y: canvas.height / 2 - paddleHeight / 2,
+      width: paddleWidth,
+      height: paddleHeight,
+      speed: 4
+    };
+    const ball = {
+      x: canvas.width / 2 - ballSize / 2,
+      y: canvas.height / 2 - ballSize / 2,
+      vx: 5 * (Math.random() > 0.5 ? 1 : -1),
+      vy: (Math.random() - 0.5) * 6,
+      size: ballSize
+    };
+
+    let leftScore = 0, rightScore = 0;
+
+    // Mouse control for left paddle
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      let mouseY = e.clientY - rect.top;
+      leftPaddle.y = mouseY - paddleHeight / 2;
+      // Clamp to canvas bounds
+      leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, leftPaddle.y));
+    });
+
+    // Draw everything
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw net
+      ctx.strokeStyle = "#fff";
+      ctx.setLineDash([8, 16]);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw paddles
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
+      ctx.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ball.x + ball.size/2, ball.y + ball.size/2, ball.size/2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw scores
+      ctx.font = "40px Arial";
+      ctx.fillText(leftScore, canvas.width/2 - 80, 50);
+      ctx.fillText(rightScore, canvas.width/2 + 40, 50);
+    }
+
+    // Ball and paddle logic
+    function update() {
+      // Move ball
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Wall collision
+      if (ball.y < 0) {
+        ball.y = 0;
+        ball.vy *= -1;
+      }
+      if (ball.y + ball.size > canvas.height) {
+        ball.y = canvas.height - ball.size;
+        ball.vy *= -1;
+      }
+
+      // Left paddle collision
+      if (
+        ball.x < leftPaddle.x + leftPaddle.width &&
+        ball.x + ball.size > leftPaddle.x &&
+        ball.y < leftPaddle.y + leftPaddle.height &&
+        ball.y + ball.size > leftPaddle.y
+      ) {
+        ball.x = leftPaddle.x + leftPaddle.width;
+        ball.vx *= -1.08;
+        ball.vy += (ball.y + ball.size / 2 - (leftPaddle.y + leftPaddle.height / 2)) * 0.15;
+      }
+
+      // Right paddle collision
+      if (
+        ball.x + ball.size > rightPaddle.x &&
+        ball.x < rightPaddle.x + rightPaddle.width &&
+        ball.y < rightPaddle.y + rightPaddle.height &&
+        ball.y + ball.size > rightPaddle.y
+      ) {
+        ball.x = rightPaddle.x - ball.size;
+        ball.vx *= -1.08;
+        ball.vy += (ball.y + ball.size / 2 - (rightPaddle.y + rightPaddle.height / 2)) * 0.15;
+      }
+
+      // Score update
+      if (ball.x < 0) {
+        rightScore++;
+        resetBall(-1);
+      }
+      if (ball.x + ball.size > canvas.width) {
+        leftScore++;
+        resetBall(1);
+      }
+
+      // --- AI for right paddle ---
+      // Move towards ball's y position
+      let target = ball.y + ball.size / 2 - paddleHeight / 2;
+      if (rightPaddle.y < target) {
+        rightPaddle.y += rightPaddle.speed;
+      } else if (rightPaddle.y > target) {
+        rightPaddle.y -= rightPaddle.speed;
+      }
+      // Clamp
+      rightPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, rightPaddle.y));
+    }
+
+    function resetBall(direction) {
+      ball.x = canvas.width / 2 - ballSize / 2;
+      ball.y = canvas.height / 2 - ballSize / 2;
+      ball.vx = 5 * direction;
+      ball.vy = (Math.random() - 0.5) * 6;
+    }
+
+    // Main loop
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Start
+    loop();
+  </script>
+</body>
+</html>
